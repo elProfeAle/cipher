@@ -238,7 +238,7 @@ btnVigenere.onclick = function(){
 
     for (let i = 0; i < longitud; i++) {
         let letra = mensaje[i]
-        let indiceLetra = ALFABETO.indexOf(letra)
+        let indiceLetra = ALFABETO.indexOf(letra)+1
 
         if(indiceLetra === -1){
             // espacio, número o signo: se copia tal cual y no consume letra de la clave
