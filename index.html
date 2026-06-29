@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cifrado César y Vigenère</title>
+<style>
+  body{
+    font-family: Arial, sans-serif;
+    background:#1b2436;
+    color:#ece3cc;
+    margin:0;
+    padding:30px 16px;
+  }
+  .contenedor{
+    max-width:560px;
+    margin:0 auto;
+  }
+  h1{
+    font-size:24px;
+    margin-bottom:4px;
+  }
+  p.intro{
+    color:#b8bfd4;
+    font-size:14px;
+    margin-top:0;
+    margin-bottom:24px;
+  }
+  .tabs{
+    display:flex;
+    gap:6px;
+    margin-bottom:20px;
+  }
+  .tab{
+    flex:1;
+    padding:10px 0;
+    background:#232f47;
+    color:#ece3cc;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:14px;
+  }
+  .tab.activo{
+    background:#c9a227;
+    color:#23190a;
+    font-weight:bold;
+  }
+  .panel{
+    background:#232f47;
+    border-radius:10px;
+    padding:22px;
+  }
+  .oculto{display:none;}
+  label{
+    display:block;
+    font-size:13px;
+    margin-bottom:5px;
+    color:#c9a227;
+  }
+  textarea, input[type=text], input[type=number]{
+    width:100%;
+    padding:9px;
+    border-radius:5px;
+    border:1px solid #00000022;
+    font-size:14px;
+    margin-bottom:14px;
+    font-family:inherit;
+    box-sizing:border-box;
+  }
+  textarea{min-height:70px; resize:vertical;}
+  .modo{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .modo label{
+    color:#ece3cc;
+    font-size:14px;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    cursor:pointer;
+  }
+  button.procesar{
+    width:100%;
+    padding:11px 0;
+    background:#c9a227;
+    color:#23190a;
+    border:none;
+    border-radius:6px;
+    font-weight:bold;
+    font-size:14px;
+    cursor:pointer;
+  }
+  button.procesar:hover{background:#dab436;}
+  p#resultado{
+    background:#f3ead4;
+    color:#2a2118;
+    padding:12px;
+    border-radius:6px;
+    margin-top:16px;
+    min-height:20px;
+    word-break:break-word;
+    font-family:'Courier New', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="contenedor">
+
+  <h1>Cifrado César y Vigenère</h1>
+  <p class="intro">Trabaja sobre el alfabeto español completo (A–Z y Ñ). Los espacios, números y signos de puntuación no se modifican.</p>
+
+  <div class="tabs">
+    <button class="tab activo" id="tabCesar">César</button>
+    <button class="tab" id="tabVigenere">Vigenère</button>
+  </div>
+
+  <!-- ===================== PANEL CÉSAR ===================== -->
+  <div class="panel" id="panelCesar">
+    <label for="msgCesar">Mensaje</label>
+    <textarea id="msgCesar" placeholder="Escribí el mensaje..."></textarea>
+
+    <label for="claveCesar">Desplazamiento (número entero)</label>
+    <input type="number" id="claveCesar" value="3">
+
+    <div class="modo">
+      <label><input type="radio" name="modoCesar" value="cifrar" checked> Cifrar</label>
+      <label><input type="radio" name="modoCesar" value="descifrar"> Descifrar</label>
+    </div>
+
+    <button class="procesar" id="btnCesar">Procesar</button>
+  </div>
+
+  <!-- ===================== PANEL VIGENÈRE ===================== -->
+  <div class="panel oculto" id="panelVigenere">
+    <label for="msgVigenere">Mensaje</label>
+    <textarea id="msgVigenere" placeholder="Escribí el mensaje..."></textarea>
+
+    <label for="claveVigenere">Palabra clave</label>
+    <input type="text" id="claveVigenere" placeholder="ej: SOL">
+
+    <div class="modo">
+      <label><input type="radio" name="modoVigenere" value="cifrar" checked> Cifrar</label>
+      <label><input type="radio" name="modoVigenere" value="descifrar"> Descifrar</label>
+    </div>
+
+    <button class="procesar" id="btnVigenere">Procesar</button>
+  </div>
+
+  <p id="resultado">Resultado: </p>
+
+</div>
+
+<script>
+// Alfabeto de trabajo: 27 letras del español, con la Ñ en su lugar real
+// (entre la N y la O). Usamos la POSICIÓN dentro de este array en vez
+// del código ASCII, porque la Ñ no está en una posición contigua en ASCII.
+const ALFABETO = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'
+const TOTAL = ALFABETO.length
+
+let resultado = document.querySelector('#resultado')
+
+// ---------- Navegación entre pestañas ----------
+let tabCesar = document.querySelector('#tabCesar')
+let tabVigenere = document.querySelector('#tabVigenere')
+let panelCesar = document.querySelector('#panelCesar')
+let panelVigenere = document.querySelector('#panelVigenere')
+
+tabCesar.onclick = function(){
+    tabCesar.classList.add('activo')
+    tabVigenere.classList.remove('activo')
+    panelCesar.classList.remove('oculto')
+    panelVigenere.classList.add('oculto')
+    resultado.textContent = 'Resultado: '
+}
+
+tabVigenere.onclick = function(){
+    tabVigenere.classList.add('activo')
+    tabCesar.classList.remove('activo')
+    panelVigenere.classList.remove('oculto')
+    panelCesar.classList.add('oculto')
+    resultado.textContent = 'Resultado: '
+}
+
+// ---------- CÉSAR ----------
+let msgCesar = document.querySelector('#msgCesar')
+let claveCesar = document.querySelector('#claveCesar')
+let btnCesar = document.querySelector('#btnCesar')
+
+btnCesar.onclick = function(){
+    let mensaje = msgCesar.value.toUpperCase()
+    let longitud = mensaje.length
+    let desplazamiento = Number(claveCesar.value)
+
+    // Si el usuario elige "Descifrar", el desplazamiento se aplica al revés
+    let modo = document.querySelector('input[name="modoCesar"]:checked').value
+    if(modo === 'descifrar') desplazamiento = -desplazamiento
+
+    let mensajeCifrado = ''
+
+    for (let i = 0; i < longitud; i++) {
+        let letra = mensaje[i]
+        let indice = ALFABETO.indexOf(letra)
+
+        if(indice === -1){
+            // no es una letra del alfabeto (espacio, número, signo): se copia tal cual
+            mensajeCifrado += letra
+        } else {
+            let nuevoIndice = (indice + desplazamiento) % TOTAL
+            if(nuevoIndice < 0) nuevoIndice += TOTAL
+            mensajeCifrado += ALFABETO[nuevoIndice]
+        }
+    }
+    resultado.textContent = `Resultado: ${mensajeCifrado}`
+}
+
+// ---------- VIGENÈRE ----------
+let msgVigenere = document.querySelector('#msgVigenere')
+let claveVigenere = document.querySelector('#claveVigenere')
+let btnVigenere = document.querySelector('#btnVigenere')
+
+btnVigenere.onclick = function(){
+    let mensaje = msgVigenere.value.toUpperCase()
+    let clave = claveVigenere.value.toUpperCase()
+    let longitud = mensaje.length
+
+    if(clave.length === 0){
+        resultado.textContent = 'Resultado: (ingresá una palabra clave)'
+        return
+    }
+
+    let modo = document.querySelector('input[name="modoVigenere"]:checked').value
+
+    let mensajeCifrado = ''
+    let j = 0   // índice que recorre la clave, independiente de "i"
+
+    for (let i = 0; i < longitud; i++) {
+        let letra = mensaje[i]
+        let indiceLetra = ALFABETO.indexOf(letra)
+
+        if(indiceLetra === -1){
+            // espacio, número o signo: se copia tal cual y no consume letra de la clave
+            mensajeCifrado += letra
+        } else {
+            let letraClave = clave[j % clave.length]
+            let indiceClave = ALFABETO.indexOf(letraClave)
+
+            let nuevoIndice
+            if(modo === 'cifrar'){
+                nuevoIndice = (indiceLetra + indiceClave) % TOTAL
+            } else {
+                nuevoIndice = (indiceLetra - indiceClave) % TOTAL
+            }
+            if(nuevoIndice < 0) nuevoIndice += TOTAL
+
+            mensajeCifrado += ALFABETO[nuevoIndice]
+            j++   // solo avanza la clave cuando realmente se procesa una letra
+        }
+    }
+    resultado.textContent = `Resultado: ${mensajeCifrado}`
+}
+</script>
+</body>
+</html>
